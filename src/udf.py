@@ -339,9 +339,10 @@ def symbols():
         symbol = request.args.get('symbol', '')
         current_app.logger.debug(f"获取符号信息: {symbol}")
 
-        # 无论参数如何，都返回基础结构
-        result = {
-            "name": "",
+        # 基础响应结构 - 确保所有必要字段都存在
+        response = {
+            "name": symbol,
+            "ticker": symbol,  # 关键字段：添加ticker属性
             "exchange-traded": "",
             "exchange-listed": "",
             "timezone": "Asia/Shanghai",
@@ -356,27 +357,29 @@ def symbols():
         }
 
         if not symbol:
-            result["description"] = "缺少符号参数"
-            return jsonify(result)
+            response["description"] = "缺少符号参数"
+            return jsonify(response)
 
         # 解析符号格式：交易所:代码
         try:
             exchange, code = symbol.split(':', 1)
-            result["exchange-traded"] = exchange
-            result["exchange-listed"] = exchange
-            result["name"] = code
-            result["description"] = f"{exchange}:{code}"
+            response["exchange-traded"] = exchange
+            response["exchange-listed"] = exchange
+            response["ticker"] = code  # 设置ticker为代码部分
+            response["name"] = f"{code} ({exchange})"
         except ValueError:
             current_app.logger.error(f"无效的符号格式: {symbol}")
-            result["description"] = f"无效的符号格式: {symbol}"
-            return jsonify(result)
+            response["description"] = f"无效的符号格式: {symbol}"
+            return jsonify(response)
 
-        # 特殊处理招商银行（确保至少有一个可用符号）
+        # 特殊处理招商银行，确保这个符号一定能工作
         if symbol == "SSE:600036":
-            result["name"] = "600036 招商银行"
-            result["description"] = "招商银行"
-            result["type"] = "stock"
-            return jsonify(result)
+            response["name"] = "招商银行"
+            response["ticker"] = "600036"
+            response["description"] = "招商银行股份有限公司"
+            response["exchange-traded"] = "SSE"
+            response["exchange-listed"] = "SSE"
+            return jsonify(response)
 
         # 查询数据库获取名称
         conn = get_db_connection()
@@ -387,34 +390,35 @@ def symbols():
         stock = cursor.fetchone()
 
         if stock:
-            result["description"] = stock['name']
-            result["name"] = f"{code} {stock['name']}"
+            response["description"] = stock['name']
+            response["name"] = f"{code} {stock['name']}"
             conn.close()
-            return jsonify(result)
+            return jsonify(response)
 
         # 再查期货
         cursor.execute("SELECT name FROM futures WHERE code = ? AND exchange = ?", (code, exchange))
         future = cursor.fetchone()
 
         if future:
-            result["description"] = future['name']
-            result["name"] = f"{code} {future['name']}"
-            result["type"] = "futures"
-            result["session"] = "0900-1015,1030-1130,1330-1500,2100-2300"
+            response["description"] = future['name']
+            response["name"] = f"{code} {future['name']}"
+            response["type"] = "futures"
+            response["session"] = "0900-1015,1030-1130,1330-1500,2100-2300"
             conn.close()
-            return jsonify(result)
+            return jsonify(response)
 
         conn.close()
         current_app.logger.warning(f"未找到符号信息: {symbol}，返回默认结构")
 
         # 即使找不到，也返回完整结构
-        return jsonify(result)
+        return jsonify(response)
 
     except Exception as e:
         current_app.logger.error(f"符号信息接口错误: {str(e)}")
-        # 发生任何异常都返回基础结构
+        # 发生任何异常都返回标准格式的对象
         return jsonify({
             "name": "error",
+            "ticker": "error",  # 确保错误情况下也有ticker字段
             "exchange-traded": "",
             "exchange-listed": "",
             "timezone": "Asia/Shanghai",
