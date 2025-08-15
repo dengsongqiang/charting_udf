@@ -33,7 +33,7 @@ app.register_blueprint(udf_bp, url_prefix="/udf")
 @app.route("/")
 def serve_html_test_page():
     """提供主HTML测试页面"""
-    test_page_path = os.path.join(PROJECT_ROOT, "index.html")
+    test_page_path = os.path.join(STATIC_PATH, "index.html")
     if os.path.exists(test_page_path):
         with open(test_page_path, 'r', encoding='utf-8') as f:
             return f.read()
