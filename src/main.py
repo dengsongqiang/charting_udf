@@ -11,6 +11,18 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from flask import Flask, send_from_directory, render_template_string, jsonify
 from udf import udf_bp, start_update_thread, init_db
 
+from flask import Flask
+
+app = Flask(__name__)
+
+# 添加全局响应头，允许 unload 事件
+@app.after_request
+def add_permissions_policy(response):
+    response.headers["Permissions-Policy"] = "unload=()"
+    return response
+
+
+
 app = Flask(__name__)
 # 设置日志级别
 app.logger.setLevel(logging.DEBUG)

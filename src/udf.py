@@ -131,8 +131,13 @@ def fetch_and_save_history_data(symbol, resolution):
 
         # 转换周期
         period_map = {
+            # 基础周期
             "1": "1", "5": "5", "15": "15", "30": "30", "60": "60",
-            "D": "daily", "W": "weekly", "M": "monthly"
+            "D": "daily", "W": "weekly", "M": "monthly",
+            # 添加 TradingView 可能传递的带数字前缀的周期
+            "1D": "daily",  # 日线（1天）
+            "1W": "weekly",  # 周线（1周）
+            "1M": "monthly"  # 月线（1月）
         }
 
         if resolution not in period_map:
@@ -243,7 +248,7 @@ def config():
         ],
         "supported_resolutions": [
             "1", "5", "15", "30", "60",
-            "D", "W", "M"
+            "D", "1D", "W", "M"
         ]
     })
 
@@ -353,7 +358,7 @@ def symbols():
             "visible_plots_set": False,
             "description": "",
             "type": "stock",
-            "supported_resolutions": ["1", "5", "15", "30", "60", "D", "W", "M"]
+            "supported_resolutions": ["1", "5", "15", "30", "60", "D", "1D", "W", "M"]
         }
 
         if not symbol:
@@ -365,7 +370,7 @@ def symbols():
             exchange, code = symbol.split(':', 1)
             response["exchange-traded"] = exchange
             response["exchange-listed"] = exchange
-            response["ticker"] = code  # 设置ticker为代码部分
+            response["ticker"] = f"{exchange}:{code}"  # 设置ticker为代码部分
             response["name"] = f"{code} ({exchange})"
         except ValueError:
             current_app.logger.error(f"无效的符号格式: {symbol}")
@@ -418,7 +423,7 @@ def symbols():
             "pricescale": 100,
             "session": "0900-1500",
             "has_intraday": True,
-            "visible_plots_set": False,
+            "visible_plots_set": True,
             "description": f"服务器错误: {str(e)}",
             "type": "stock",
             "supported_resolutions": ["1", "5", "15", "30", "60", "D", "W", "M"]
@@ -474,6 +479,7 @@ def history():
             "30": "30",  # 30分钟
             "60": "60",  # 60分钟
             "D": "daily",  # 日线
+            "1D": "daily",  # 日线
             "W": "weekly",  # 周线
             "M": "monthly"  # 月线
         }
@@ -486,9 +492,23 @@ def history():
         current_app.logger.debug(f"时间周期转换: {resolution} -> {ak_period}")
 
         # 转换时间格式为AKShare需要的字符串（YYYYMMDD）
-        from_date = datetime.fromtimestamp(from_time).strftime('%Y%m%d')
-        to_date = datetime.fromtimestamp(to_time).strftime('%Y%m%d')
-        current_app.logger.debug(f"查询时间范围: {from_date} 至 {to_date}")
+        try:
+            # 校验时间戳有效性（Python可处理的时间范围约为1970-2100年）
+            if from_time < 0 or from_time > 4102444800:  # 4102444800是2100年的时间戳
+                from_time = int(time.time()) - 30 * 86400  # 默认为30天前
+
+            if to_time < 0 or to_time > 4102444800:
+                to_time = int(time.time())  # 默认为当前时间
+
+            from_date = datetime.fromtimestamp(from_time).strftime('%Y%m%d')
+            to_date = datetime.fromtimestamp(to_time).strftime('%Y%m%d')
+            current_app.logger.debug(f"查询时间范围: {from_date} 至 {to_date}")
+        except OSError as e:
+            current_app.logger.error(f"时间戳转换失败: {e}")
+            # 提供默认时间范围（最近30天）
+            from_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
+            to_date = datetime.now().strftime('%Y%m%d')
+            current_app.logger.debug(f"使用默认时间范围: {from_date} 至 {to_date}")
 
         # 获取K线数据
         df = None
