@@ -355,7 +355,7 @@ def symbols():
             "pricescale": 100,
             "session": "0930-1130,1300-1500",
             "has_intraday": True,
-            "visible_plots_set": False,
+            "visible_plots_set": True,
             "description": "",
             "type": "stock",
             "supported_resolutions": ["1", "5", "15", "30", "60", "D", "1D", "W", "M"]
@@ -549,7 +549,12 @@ def history():
         # 格式化数据为TradingView要求的格式
         try:
             # 确保日期列存在并转换为时间戳（秒级）
-            if '日期' in df.columns:
+            # 优先处理分钟线特有的 `day` 列（AKShare 分钟线数据的时间列名）
+            if 'day' in df.columns:
+                df['timestamp'] = df['day'].apply(
+                    lambda x: int(pd.to_datetime(x).timestamp())
+                )
+            elif '日期' in df.columns:
                 df['timestamp'] = df['日期'].apply(
                     lambda x: int(pd.to_datetime(x).timestamp())
                 )
@@ -558,15 +563,18 @@ def history():
                     lambda x: int(pd.to_datetime(x).timestamp())
                 )
             else:
-                # 尝试自动识别日期列
-                date_cols = [col for col in df.columns if 'date' in col.lower() or 'time' in col.lower()]
+                # 尝试自动识别日期列（包含 day、date、time 等关键词）
+                date_cols = [col for col in df.columns if
+                             'date' in col.lower() or
+                             'time' in col.lower() or
+                             'day' in col.lower()]  # 新增对 day 的识别
                 if date_cols:
                     df['timestamp'] = df[date_cols[0]].apply(
                         lambda x: int(pd.to_datetime(x).timestamp())
                     )
                 else:
-                    current_app.logger.error("未找到日期列，无法转换时间戳")
-                    return jsonify({"s": "error", "errmsg": "数据格式错误"})
+                    current_app.logger.error("未找到日期列（day/日期/时间），无法转换时间戳")
+                    return jsonify({"s": "error", "errmsg": "数据格式错误（缺少时间列）"})
 
             # 映射价格和成交量列（处理不同数据源的列名差异）
             price_cols = {
