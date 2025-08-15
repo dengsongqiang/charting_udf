@@ -348,9 +348,9 @@ def symbols():
             "timezone": "Asia/Shanghai",
             "minmov": 1,
             "pricescale": 100,
-            "session": "0900-1500",
+            "session": "0930-1130,1300-1500",
             "has_intraday": True,
-            "has_no_volume": False,
+            "visible_plots_set": False,
             "description": "",
             "type": "stock",
             "supported_resolutions": ["1", "5", "15", "30", "60", "D", "W", "M"]
@@ -372,14 +372,6 @@ def symbols():
             response["description"] = f"无效的符号格式: {symbol}"
             return jsonify(response)
 
-        # 特殊处理招商银行，确保这个符号一定能工作
-        if symbol == "SSE:600036":
-            response["name"] = "招商银行"
-            response["ticker"] = "600036"
-            response["description"] = "招商银行股份有限公司"
-            response["exchange-traded"] = "SSE"
-            response["exchange-listed"] = "SSE"
-            return jsonify(response)
 
         # 查询数据库获取名称
         conn = get_db_connection()
@@ -426,7 +418,7 @@ def symbols():
             "pricescale": 100,
             "session": "0900-1500",
             "has_intraday": True,
-            "has_no_volume": False,
+            "visible_plots_set": False,
             "description": f"服务器错误: {str(e)}",
             "type": "stock",
             "supported_resolutions": ["1", "5", "15", "30", "60", "D", "W", "M"]
