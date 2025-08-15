@@ -1,0 +1,90 @@
+<!DOCTYPE HTML>
+<html lang="zh">
+    <head>
+        <meta charset = "UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>本地测试</title>
+
+
+        <script src="charting_library/charting_library.standalone.js"></script>
+        <script src="datafeeds/udf/dist/bundle.js"></script>
+    </head>
+    <body>
+
+        <div id="chartContainer"></div>
+
+        <script>
+            // 全局变量存储所有符号列表
+            let allSymbols = [];
+
+            // 从后端加载符号列表
+            function loadSymbols() {
+                fetch('/udf/symbols_list')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('符号列表加载失败');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        allSymbols = data;
+                        console.log('符号列表加载完成:', allSymbols.length);
+                    })
+                    .catch(error => {
+                        console.error('加载符号列表失败，使用备用数据:', error);
+                        // 加载失败时使用备用数据
+                        allSymbols = [
+                            { code: "600000", name: "浦发银行", exchange: "SSE", type: "stock" },
+                            { code: "600036", name: "招商银行", exchange: "SSE", type: "stock" },
+                            { code: "000001", name: "平安银行", exchange: "SZSE", type: "stock" },
+                            { code: "000858", name: "五粮液", exchange: "SZSE", type: "stock" },
+                            { code: "002594", name: "比亚迪", exchange: "SZSE", type: "stock" },
+                            { code: "IF2312", name: "沪深300指数期货", exchange: "CFFEX", type: "future" },
+                            { code: "IC2312", name: "中证500指数期货", exchange: "CFFEX", type: "future" }
+                        ];
+                    });
+            }
+
+            // 页面加载时先加载符号列表
+            loadSymbols();
+
+            new TradingView.widget({
+                container: 'chartContainer',
+                locale: 'zh',
+                library_path: 'charting_library/',
+                // 修改数据feed为你的后端服务
+                datafeed: new Datafeeds.UDFCompatibleDatafeed("/udf"),
+                // 默认显示招商银行
+                symbol: 'SSE:600036',
+                interval: '1D',
+                fullscreen: true,
+                debug: true,
+                // 启用搜索功能
+                enabled_features: ["symbol_search"],
+                // 自定义符号搜索
+                symbol_search_request: function(searchString, onResultReadyCallback) {
+                    // 过滤符号列表
+                    const filtered = allSymbols.filter(symbol =>
+                        symbol.code.toLowerCase().includes(searchString.toLowerCase()) ||
+                        symbol.name.toLowerCase().includes(searchString.toLowerCase())
+                    );
+
+                    // 格式化结果为TradingView所需格式
+                    const results = filtered.map(symbol => ({
+                        symbol: `${symbol.exchange}:${symbol.code}`,
+                        full_name: `${symbol.exchange}:${symbol.code}`,
+                        description: symbol.name,
+                        exchange: symbol.exchange,
+                        type: symbol.type
+                    }));
+
+                    // 返回结果
+                    onResultReadyCallback({
+                        result: results
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>
