@@ -235,14 +235,19 @@ def config():
         "supports_timescale_marks": False,
         "supports_time": True,
         "exchanges": [
+            {"value": "", "name": "全部", "desc": ""},
             {"value": "SSE", "name": "上海证券交易所", "desc": ""},
             {"value": "SZSE", "name": "深圳证券交易所", "desc": ""},
+            {"value": "BSE", "name": "北京证券交易所", "desc": ""},
             {"value": "CFFEX", "name": "中国金融期货交易所", "desc": ""},
             {"value": "SHFE", "name": "上海期货交易所", "desc": ""},
             {"value": "DCE", "name": "大连商品交易所", "desc": ""},
-            {"value": "CZCE", "name": "郑州商品交易所", "desc": ""}
+            {"value": "CZCE", "name": "郑州商品交易所", "desc": ""},
+            {"value": "INE", "name": "上海国际能源交易中心", "desc": ""},
+            {"value": "GFEX", "name": "广州商品交易所", "desc": ""},
         ],
         "symbols_types": [
+            {"name": "全部", "value": ""},
             {"name": "股票", "value": "stock"},
             {"name": "期货", "value": "future"}
         ],
